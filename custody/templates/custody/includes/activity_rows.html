@@ -1,0 +1,11 @@
+{% load i18n %}
+{% for activity in activities %}
+<tr>
+    <td>{{ activity.user.username }}</td>
+    <td><span class="badge bg-light text-dark">{{ activity.action }}</span></td>
+    <td>{% if activity.deposit %}<a href="{% url 'deposit_detail' activity.deposit.pk %}">{{ activity.deposit.deposit_number }}</a>{% else %}--{% endif %}</td>
+    <td><small class="text-muted">{{ activity.timestamp|timesince }} ago</small></td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="text-center py-4 text-muted">{% trans 'No recent activities' %}</td></tr>
+{% endfor %}

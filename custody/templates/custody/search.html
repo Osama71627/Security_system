@@ -1,0 +1,84 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Search & Track' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Search & Track Deposits' %}{% endblock %}
+{% block content %}
+<div class="search-page">
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">{% trans 'Search' %}</label>
+                    <input type="text" name="q" class="form-control form-control-lg" placeholder="{% trans 'Deposit No, Barcode, Visitor, Phone...' %}" value="{{ query }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'Status' %}</label>
+                    <select name="status" class="form-select">
+                        <option value="">{% trans 'All' %}</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'Location' %}</label>
+                    <select name="location" class="form-select">
+                        <option value="">{% trans 'All' %}</option>
+                        {% for val, label in location_choices %}
+                        <option value="{{ val }}" {% if request.GET.location == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'From' %}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'To' %}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-lg px-5"><i class="bi bi-search"></i> {% trans 'Search' %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if query or request.GET.status or request.GET.location %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{% trans 'Search Results' %} ({{ count }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr><th>{% trans 'Deposit No' %}</th><th>{% trans 'Visitor' %}</th><th>{% trans 'Mobile' %}</th><th>{% trans 'Status' %}</th><th>{% trans 'Location' %}</th><th>{% trans 'Date' %}</th><th>{% trans 'Actions' %}</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in results %}
+                        <tr>
+                            <td><a href="{% url 'deposit_detail' d.pk %}" class="fw-medium">{{ d.deposit_number }}</a></td>
+                            <td>{{ d.visitor_name }}</td>
+                            <td>{{ d.mobile_number }}</td>
+                            <td><span class="status-badge status-{{ d.status }}">{{ d.get_status_display }}</span></td>
+                            <td><small>{{ d.get_storage_location_display }}</small></td>
+                            <td><small>{{ d.created_at|date:'Y-m-d' }}</small></td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'deposit_detail' d.pk %}" class="btn btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'deposit_receipt' d.pk %}" class="btn btn-outline-info" target="_blank"><i class="bi bi-receipt"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center py-5 text-muted">{% trans 'No results found' %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

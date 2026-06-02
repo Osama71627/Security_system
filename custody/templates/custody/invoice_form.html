@@ -1,0 +1,94 @@
+{% extends 'custody/base.html' %}
+{% load static i18n crispy_forms_tags %}
+{% block title %}{% trans 'New Invoice' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Create Invoice' %}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="post" id="invoiceForm">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">{{ form.customer_name|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.customer_phone|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.deposit|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.tax_percent|as_crispy_field }}</div>
+                <div class="col-12">{{ form.notes|as_crispy_field }}</div>
+            </div>
+            <hr>
+            <h6 class="fw-bold">{% trans 'Invoice Items' %}</h6>
+            <div class="table-responsive">
+                <table class="table" id="itemsTable">
+                    <thead><tr><th>{% trans 'Service Item' %}</th><th>{% trans 'Quantity' %}</th><th>{% trans 'Unit Price' %}</th><th>{% trans 'Total' %}</th><th></th></tr></thead>
+                    <tbody>
+                        <tr class="item-row">
+                            <td><input type="text" name="service_item[]" class="form-control form-control-sm" placeholder="{% trans 'Item name' %}"></td>
+                            <td><input type="number" name="quantity[]" class="form-control form-control-sm qty" value="1" min="1"></td>
+                            <td><input type="number" name="unit_price[]" class="form-control form-control-sm price" step="0.01" value="0"></td>
+                            <td><span class="row-total fw-medium">0.00</span></td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="bi bi-trash"></i></button></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="5"><button type="button" class="btn btn-sm btn-outline-primary" id="addItem"><i class="bi bi-plus-lg"></i> {% trans 'Add Item' %}</button></td></tr>
+                        <tr><td colspan="3" class="text-end fw-bold">{% trans 'Subtotal' %}:</td><td><span id="subtotal">0.00</span></td><td></td></tr>
+                        <tr><td colspan="3" class="text-end fw-bold">{% trans 'Tax' %} (<span id="taxPercent">15</span>%):</td><td><span id="taxAmount">0.00</span></td><td></td></tr>
+                        <tr class="fs-5 fw-bold"><td colspan="3" class="text-end">{% trans 'Total' %}:</td><td><span id="grandTotal">0.00</span></td><td></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'invoice_list' %}" class="btn btn-secondary">{% trans 'Cancel' %}</a>
+                <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> {% trans 'Create Invoice' %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    $('select').select2({ theme: 'bootstrap-5', width: '100%' });
+
+    function calcRow(row) {
+        var qty = parseFloat(row.find('.qty').val()) || 0;
+        var price = parseFloat(row.find('.price').val()) || 0;
+        var total = qty * price;
+        row.find('.row-total').text(total.toFixed(2));
+        return total;
+    }
+
+    function calcAll() {
+        var subtotal = 0;
+        $('.item-row').each(function() { subtotal += calcRow($(this)); });
+        var taxPercent = parseFloat($('#id_tax_percent').val()) || 0;
+        var tax = subtotal * taxPercent / 100;
+        var grandTotal = subtotal + tax;
+        $('#subtotal').text(subtotal.toFixed(2));
+        $('#taxPercent').text(taxPercent.toFixed(2));
+        $('#taxAmount').text(tax.toFixed(2));
+        $('#grandTotal').text(grandTotal.toFixed(2));
+    }
+
+    $('#addItem').on('click', function() {
+        var row = $('.item-row:first').clone();
+        row.find('input').val('');
+        row.find('.qty').val(1);
+        row.find('.price').val(0);
+        row.find('.row-total').text('0.00');
+        $('#itemsTable tbody').append(row);
+        row.find('input').on('input', function() { calcAll(); });
+    });
+
+    $(document).on('click', '.remove-item', function() {
+        if ($('.item-row').length > 1) {
+            $(this).closest('.item-row').remove();
+            calcAll();
+        }
+    });
+
+    $(document).on('input', '.qty, .price', function() { calcAll(); });
+    $('#id_tax_percent').on('input', function() { calcAll(); });
+    calcAll();
+});
+</script>
+{% endblock %}

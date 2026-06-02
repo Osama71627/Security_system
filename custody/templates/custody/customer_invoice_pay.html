@@ -1,0 +1,41 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Pay Invoice' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Pay Invoice' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center p-5">
+                <i class="bi bi-receipt text-primary" style="font-size:3.5rem;"></i>
+                <h3 class="mt-3">{% trans 'Invoice Payment' %}</h3>
+
+                <div class="border rounded p-4 bg-light my-4 text-start">
+                    <p><strong>{% trans 'Deposit' %}:</strong> {{ deposit.deposit_number }}</p>
+                    <p><strong>{% trans 'Item' %}:</strong> {{ deposit.description|truncatechars:50 }}</p>
+                    {% if invoice %}
+                    <hr>
+                    <p><strong>{% trans 'Invoice' %}:</strong> {{ invoice.invoice_number }}</p>
+                    <p><strong>{% trans 'Amount Due' %}:</strong> <span class="fs-5 fw-bold text-primary">{{ invoice.total }} {% trans 'EGP' %}</span></p>
+                    {% endif %}
+                    <p><strong>{% trans 'Status' %}:</strong> <span class="badge bg-warning">{% trans 'Awaiting Payment' %}</span></p>
+                </div>
+
+                <p class="text-muted">{% trans 'Click the button below to complete payment. After payment, you will receive your barcode for pickup.' %}</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> {% trans 'Pay Now' %}
+                        </button>
+                        <a href="{% url 'customer_deposit_detail' deposit.pk %}" class="btn btn-outline-secondary">
+                            {% trans 'Cancel' %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

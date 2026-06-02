@@ -1,0 +1,28 @@
+{% extends 'custody/base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Delete Deposit' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Confirm Delete' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> {% trans 'Delete Deposit' %}</h5>
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="bi bi-trash text-danger" style="font-size:3rem;"></i>
+                <h4 class="mt-3">{% trans 'Are you sure?' %}</h4>
+                <p>{% trans 'You are about to delete deposit' %} <strong>{{ deposit.deposit_number }}</strong> ({{ deposit.visitor_name }}).</p>
+                <p class="text-danger"><small>{% trans 'This action cannot be undone.' %}</small></p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'deposit_detail' deposit.pk %}" class="btn btn-secondary">{% trans 'Cancel' %}</a>
+                        <button type="submit" class="btn btn-danger px-4"><i class="bi bi-trash"></i> {% trans 'Delete' %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

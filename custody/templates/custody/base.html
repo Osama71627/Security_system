@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}?v=1" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <div class="app-wrapper">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{% if is_staff %}{% url 'dashboard' %}{% else %}{% url 'customer_home' %}{% endif %}" class="logo">
+                    <i class="bi bi-shield-check"></i>
+                    <span class="logo-text">{{ SITE_NAME }}</span>
+                </a>
+                <button class="btn btn-sm btn-outline-secondary sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="sidebar-body">
+                <ul class="nav-list">
+                {% if is_staff %}
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="bi bi-grid-1x2-fill"></i>
+                            <span>{% trans 'Dashboard' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-section">{% trans 'Deposits' %}</li>
+                    <li class="nav-item">
+                        <a href="{% url 'deposit_list' %}" class="nav-link {% if request.resolver_match.url_name == 'deposit_list' %}active{% endif %}">
+                            <i class="bi bi-box-seam-fill"></i>
+                            <span>{% trans 'All Deposits' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'deposit_create' %}" class="nav-link {% if request.resolver_match.url_name == 'deposit_create' %}active{% endif %}">
+                            <i class="bi bi-plus-circle-fill"></i>
+                            <span>{% trans 'New Deposit' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'barcode_delivery' %}" class="nav-link {% if request.resolver_match.url_name == 'barcode_delivery' %}active{% endif %}">
+                            <i class="bi bi-upc-scan"></i>
+                            <span>{% trans 'Barcode Delivery' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-section">{% trans 'Invoicing' %}</li>
+                    <li class="nav-item">
+                        <a href="{% url 'invoice_list' %}" class="nav-link {% if request.resolver_match.url_name == 'invoice_list' %}active{% endif %}">
+                            <i class="bi bi-receipt-cutoff"></i>
+                            <span>{% trans 'Invoices' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'invoice_create' %}" class="nav-link {% if request.resolver_match.url_name == 'invoice_create' %}active{% endif %}">
+                            <i class="bi bi-file-earmark-plus-fill"></i>
+                            <span>{% trans 'New Invoice' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-section">{% trans 'Operations' %}</li>
+                    <li class="nav-item">
+                        <a href="{% url 'search' %}" class="nav-link {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
+                            <i class="bi bi-search"></i>
+                            <span>{% trans 'Search & Track' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <span>{% trans 'Reports' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'activity_log' %}" class="nav-link {% if request.resolver_match.url_name == 'activity_log' %}active{% endif %}">
+                            <i class="bi bi-activity"></i>
+                            <span>{% trans 'Activity Log' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-section">{% trans 'Administration' %}</li>
+                    <li class="nav-item">
+                        <a href="{% url 'customer_list' %}" class="nav-link {% if request.resolver_match.url_name == 'customer_list' %}active{% endif %}">
+                            <i class="bi bi-people-fill"></i>
+                            <span>{% trans 'Customers' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'admin_list' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_list' %}active{% endif %}">
+                            <i class="bi bi-shield-fill"></i>
+                            <span>{% trans 'Admins' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'storage_box_list' %}" class="nav-link {% if request.resolver_match.url_name == 'storage_box_list' %}active{% endif %}">
+                            <i class="bi bi-inboxes-fill"></i>
+                            <span>{% trans 'Storage Boxes' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'settings' %}" class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                            <i class="bi bi-gear-fill"></i>
+                            <span>{% trans 'Settings' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/admin/" class="nav-link">
+                            <i class="bi bi-shield-lock-fill"></i>
+                            <span>{% trans 'Admin Panel' %}</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a href="{% url 'customer_home' %}" class="nav-link {% if request.resolver_match.url_name == 'customer_home' %}active{% endif %}">
+                            <i class="bi bi-house-fill"></i>
+                            <span>{% trans 'Home' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'customer_deposit' %}" class="nav-link {% if request.resolver_match.url_name == 'customer_deposit' %}active{% endif %}">
+                            <i class="bi bi-plus-circle-fill"></i>
+                            <span>{% trans 'New Deposit' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-section">{% trans 'My Deposits' %}</li>
+                    {% for d in user.customer_profile.deposits.all|slice:':5' %}
+                    <li class="nav-item">
+                        <a href="{% url 'customer_success' d.pk %}" class="nav-link small">
+                            <i class="bi bi-upc-scan"></i>
+                            <span>{{ d.deposit_number }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                {% endif %}
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="btn btn-sm btn-outline-secondary sidebar-toggle me-2" onclick="toggleSidebar()">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h5 class="mb-0 page-title">{% block page_title %}{% endblock %}</h5>
+                </div>
+                <div class="topbar-right">
+                    <div class="dropdown me-2">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-globe2"></i> {{ LANGUAGE_CODE|upper }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% get_available_languages as LANGUAGES %}
+                            {% for lang_code, lang_name in LANGUAGES %}
+                            <li>
+                                <form action="{% url 'set_language' %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input name="language" type="hidden" value="{{ lang_code }}">
+                                    <button type="submit" class="dropdown-item {% if lang_code == LANGUAGE_CODE %}active{% endif %}">
+                                        {{ lang_name }}
+                                    </button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleDarkMode()" title="{% trans 'Toggle Dark Mode' %}">
+                        <i class="bi bi-moon-fill" id="darkModeIcon"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <span class="ms-1 d-none d-md-inline">{{ user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text text-muted small">{{ user.username }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> {% trans 'Logout' %}</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                {% if messages %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    {% else %}
+    <div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+        {% block auth_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{% static 'js/main.js' %}?v=1"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

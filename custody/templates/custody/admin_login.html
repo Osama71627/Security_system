@@ -1,0 +1,47 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Admin Login' %} - {{ SITE_NAME }}{% endblock %}
+{% block auth_content %}
+<div class="card" style="width:400px;">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <i class="bi bi-shield-check text-primary" style="font-size:3rem;"></i>
+            <h4 class="mt-2">{{ SITE_NAME }}</h4>
+            <p class="text-muted">{% trans 'Admin Portal' %}</p>
+        </div>
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-medium">{% trans 'Username' %}</label>
+                <input type="text" name="username" class="form-control form-control-lg" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">{% trans 'Password' %}</label>
+                <input type="password" name="password" class="form-control form-control-lg" required>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right"></i> {% trans 'Login' %}
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-3">
+            <a href="{% url 'customer_register' %}" class="text-decoration-none small">
+                {% trans 'Customer? Click here' %}
+            </a>
+            <br>
+            <a href="{% url 'admin_register' %}" class="text-decoration-none small">
+                {% trans 'Register new admin' %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

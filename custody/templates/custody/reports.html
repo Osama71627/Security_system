@@ -1,0 +1,109 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Reports' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Reports' %}{% endblock %}
+{% block content %}
+<div class="reports-page">
+    <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('daily','csv')">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-day report-icon text-primary"></i>
+                    <h6>{% trans 'Daily Report' %}</h6>
+                    <small class="text-muted">{% trans 'Today deposits' %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('monthly','csv')">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-month report-icon text-success"></i>
+                    <h6>{% trans 'Monthly Report' %}</h6>
+                    <small class="text-muted">{% trans 'This month deposits' %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('revenue','pdf')">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar report-icon text-warning"></i>
+                    <h6>{% trans 'Revenue Report' %}</h6>
+                    <small class="text-muted">{% trans 'Income summary' %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('pending','csv')">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock-history report-icon text-danger"></i>
+                    <h6>{% trans 'Pending Deposits' %}</h6>
+                    <small class="text-muted">{% trans 'Awaiting delivery' %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('delivered','csv')">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle report-icon text-info"></i>
+                    <h6>{% trans 'Delivered Deposits' %}</h6>
+                    <small class="text-muted">{% trans 'Completed deposits' %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card report-card" onclick="exportReport('revenue','csv')">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up report-icon text-secondary"></i>
+                    <h6>{% trans 'Revenue CSV' %}</h6>
+                    <small class="text-muted">{% trans 'Export as CSV' %}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header"><h5 class="mb-0">{% trans 'Custom Report' %}</h5></div>
+        <div class="card-body">
+            <form method="get" action="{% url 'export_report' %}" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">{% trans 'Date From' %}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">{% trans 'Date To' %}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'Type' %}</label>
+                    <select name="type" class="form-select">
+                        <option value="daily">{% trans 'Daily' %}</option>
+                        <option value="monthly">{% trans 'Monthly' %}</option>
+                        <option value="pending">{% trans 'Pending' %}</option>
+                        <option value="delivered">{% trans 'Delivered' %}</option>
+                        <option value="revenue">{% trans 'Revenue' %}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-medium">{% trans 'Format' %}</label>
+                    <select name="format" class="form-select">
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-download"></i> {% trans 'Export Report' %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function exportReport(type, format) {
+    var url = '{% url "export_report" %}?type=' + type + '&format=' + format;
+    url += '&date_from={{ date_from }}&date_to={{ date_to }}';
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

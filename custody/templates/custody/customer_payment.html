@@ -1,0 +1,45 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Payment' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Complete Payment' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center p-5">
+                <i class="bi bi-credit-card text-primary" style="font-size:4rem;"></i>
+                <h3 class="mt-3">{% trans 'Confirm Payment' %}</h3>
+
+                <div class="border rounded p-4 bg-light my-4 text-start">
+                    <p><strong>{% trans 'Deposit' %}:</strong> {{ deposit.deposit_number }}</p>
+                    <p><strong>{% trans 'Item' %}:</strong> {{ deposit.description|truncatechars:50 }}</p>
+                    <p><strong>{% trans 'Status' %}:</strong> <span class="badge bg-warning">{% trans 'Pending Payment' %}</span></p>
+                    {% if deposit.storage_box %}
+                    <p><strong>{% trans 'Storage Box' %}:</strong> <span class="badge bg-info">{{ deposit.storage_box.box_number }}</span></p>
+                    <p class="small text-muted">{% trans 'Your item will be stored in this box.' %}</p>
+                    {% endif %}
+                    <hr>
+                    {% if invoice %}
+                    <p><strong>{% trans 'Invoice' %}:</strong> {{ invoice.invoice_number }}</p>
+                    <p class="fs-5 fw-bold text-primary">{% trans 'Amount Due' %}: {{ invoice.total }} {% trans 'EGP' %}</p>
+                    {% else %}
+                    <p class="text-muted">{% trans 'Confirm to complete your deposit and receive your barcode.' %}</p>
+                    {% endif %}
+                </div>
+
+                <p class="text-muted">{% trans 'Payment is required to generate your barcode for pickup.' %}</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> {% trans 'Pay & Get Barcode' %}
+                        </button>
+                        <a href="{% url 'customer_home' %}" class="btn btn-outline-secondary">{% trans 'Cancel' %}</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

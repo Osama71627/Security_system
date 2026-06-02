@@ -1,0 +1,273 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Dashboard' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Dashboard' %}{% endblock %}
+{% block content %}
+<div class="dashboard">
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary-soft">
+                    <i class="bi bi-box-seam-fill text-primary"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Total Deposits' %}</span>
+                    <span class="stat-value" id="totalDeposits">{{ total_deposits }}</span>
+                </div>
+                <div class="stat-trend trend-up"><i class="bi bi-arrow-up"></i> +{{ deposits_today }} today</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-success-soft">
+                    <i class="bi bi-calendar-check text-success"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Deposits Today' %}</span>
+                    <span class="stat-value" id="depositsToday">{{ deposits_today }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning-soft">
+                    <i class="bi bi-clock-history text-warning"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Pending Pickup' %}</span>
+                    <span class="stat-value" id="pendingPickup">{{ pending_pickup }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-info-soft">
+                    <i class="bi bi-check-circle-fill text-info"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Delivered' %}</span>
+                    <span class="stat-value" id="deliveredDeposits">{{ delivered_deposits }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-success-soft">
+                    <i class="bi bi-currency-dollar text-success"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Revenue Today' %}</span>
+                    <span class="stat-value" id="revenueToday">{{ revenue_today|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary-soft">
+                    <i class="bi bi-graph-up-arrow text-primary"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">{% trans 'Revenue Month' %}</span>
+                    <span class="stat-value" id="revenueMonth">{{ revenue_month|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card dashboard-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>{% trans 'Deposits Overview' %}</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" data-period="7">7D</button>
+                        <button class="btn btn-outline-secondary" data-period="30">30D</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="depositsChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart-fill me-2"></i>{% trans 'Status Distribution' %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>{% trans 'Revenue Chart' %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>{% trans 'Payment Statistics' %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="paymentChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card dashboard-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{% trans 'Recent Activities' %}</h5>
+                    <a href="{% url 'activity_log' %}" class="btn btn-sm btn-outline-primary">{% trans 'View All' %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans 'User' %}</th>
+                                    <th>{% trans 'Action' %}</th>
+                                    <th>{% trans 'Deposit' %}</th>
+                                    <th>{% trans 'Time' %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td>{{ activity.user.username }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ activity.action }}</span></td>
+                                    <td>
+                                        {% if activity.deposit %}
+                                        <a href="{% url 'deposit_detail' activity.deposit.pk %}">{{ activity.deposit.deposit_number }}</a>
+                                        {% else %}--{% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ activity.timestamp|timesince }} ago</small></td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center py-4 text-muted">{% trans 'No recent activities' %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>{% trans 'Recent Deposits' %}</h5>
+                    <a href="{% url 'deposit_list' %}" class="btn btn-sm btn-outline-primary">{% trans 'All' %}</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for deposit in recent_deposits %}
+                        <a href="{% url 'deposit_detail' deposit.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">{{ deposit.deposit_number }}</small>
+                                <div class="fw-medium">{{ deposit.visitor_name }}</div>
+                            </div>
+                            <span class="badge rounded-pill bg-{% if deposit.status == 'delivered' %}success{% elif deposit.status == 'paid' %}primary{% elif deposit.status == 'draft' %}secondary{% else %}warning{% endif %}">
+                                {{ deposit.get_status_display }}
+                            </span>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-4 text-muted">{% trans 'No deposits yet' %}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    $.getJSON('{% url "ajax_chart_data" %}', function(data) {
+        new Chart(document.getElementById('depositsChart'), {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: '{% trans "Deposits" %}',
+                    data: data.daily_deposits,
+                    borderColor: '#4f6ef7',
+                    backgroundColor: 'rgba(79,110,247,0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+            }
+        });
+
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.status_chart.labels,
+                datasets: [{
+                    data: data.status_chart.values,
+                    backgroundColor: ['#6c757d', '#ffc107', '#0d6efd', '#198754', '#dc3545']
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: '{% trans "Revenue" %}',
+                    data: data.daily_revenue,
+                    backgroundColor: 'rgba(25,135,84,0.6)',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+            }
+        });
+
+        new Chart(document.getElementById('paymentChart'), {
+            type: 'polarArea',
+            data: {
+                labels: data.payment_chart.labels,
+                datasets: [{
+                    data: data.payment_chart.values,
+                    backgroundColor: ['#198754', '#ffc107', '#0d6efd', '#dc3545']
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    });
+
+    setInterval(function() {
+        $.getJSON('{% url "ajax_dashboard_stats" %}', function(data) {
+            $('#totalDeposits').text(data.total_deposits);
+            $('#depositsToday').text(data.deposits_today);
+            $('#pendingPickup').text(data.pending_pickup);
+            $('#deliveredDeposits').text(data.delivered_deposits);
+            $('#revenueToday').text(data.revenue_today.toFixed(2));
+            $('#revenueMonth').text(data.revenue_month.toFixed(2));
+        });
+    }, 30000);
+});
+</script>
+{% endblock %}

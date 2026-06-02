@@ -1,0 +1,55 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Storage Boxes' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Storage Box Management' %}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-inboxes-fill me-2"></i>{% trans 'Storage Boxes' %}</h5>
+        <a href="{% url 'storage_box_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i> {% trans 'Add Box' %}
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>{% trans 'Box Number' %}</th>
+                        <th>{% trans 'Description' %}</th>
+                        <th>{% trans 'Location Area' %}</th>
+                        <th>{% trans 'Status' %}</th>
+                        <th>{% trans 'Actions' %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for box in boxes %}
+                    <tr>
+                        <td class="fw-medium">{{ box.box_number }}</td>
+                        <td>{{ box.description|default:'-' }}</td>
+                        <td>{{ box.location_area|default:'-' }}</td>
+                        <td>
+                            {% if box.is_available %}
+                            <span class="badge bg-success">{% trans 'Available' %}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{% trans 'Occupied' %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'storage_box_toggle' box.pk %}" class="btn btn-sm btn-outline-warning">
+                                {% if box.is_available %}<i class="bi bi-lock"></i>{% else %}<i class="bi bi-unlock"></i>{% endif %}
+                            </a>
+                            <a href="{% url 'storage_box_delete' box.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{% trans 'Delete this box?' %}')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">{% trans 'No storage boxes yet. Add one!' %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

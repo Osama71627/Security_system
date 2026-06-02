@@ -1,0 +1,178 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{{ deposit.deposit_number }} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Deposit' %}: {{ deposit.deposit_number }}{% endblock %}
+{% block content %}
+<div class="deposit-detail-page">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{% trans 'Deposit Information' %}</h5>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'deposit_edit' deposit.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'deposit_receipt' deposit.pk %}" class="btn btn-sm btn-outline-info" target="_blank"><i class="bi bi-receipt"></i> {% trans 'Receipt' %}</a>
+                        <a href="{% url 'deposit_label' deposit.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="bi bi-upc-scan"></i> {% trans 'Label' %}</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="detail-label">{% trans 'Visitor Name' %}</label>
+                            <p class="detail-value">{{ deposit.visitor_name }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-label">{% trans 'Mobile' %}</label>
+                            <p class="detail-value">{{ deposit.mobile_number }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-label">{% trans 'National ID' %}</label>
+                            <p class="detail-value">{{ deposit.national_id }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-label">{% trans 'Check-In Date' %}</label>
+                            <p class="detail-value">{{ deposit.check_in_date|date:'Y-m-d H:i' }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-label">{% trans 'Expected Pickup' %}</label>
+                            <p class="detail-value">{{ deposit.expected_pickup_date|date:'Y-m-d'|default:'--' }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-label">{% trans 'Assigned Employee' %}</label>
+                            <p class="detail-value">{{ deposit.assigned_employee.full_name|default:'--' }}</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="detail-label">{% trans 'Description' %}</label>
+                            <p class="detail-value">{{ deposit.description|linebreaks }}</p>
+                        </div>
+                        {% if deposit.notes %}
+                        <div class="col-12">
+                            <label class="detail-label">{% trans 'Notes' %}</label>
+                            <p class="detail-value">{{ deposit.notes|linebreaks }}</p>
+                        </div>
+                        {% endif %}
+                        {% if deposit.storage_box %}
+                        <div class="col-md-6">
+                            <label class="detail-label">{% trans 'Storage Box' %}</label>
+                            <p class="detail-value"><span class="badge bg-info">{{ deposit.storage_box.box_number }}</span></p>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6">
+                            <label class="detail-label">{% trans 'Storage Location' %}</label>
+                            <p class="detail-value">{{ deposit.get_storage_location_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="detail-label">{% trans 'Shelf Number' %}</label>
+                            <p class="detail-value">{{ deposit.shelf_number|default:'--' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if deposit.photos.exists %}
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">{% trans 'Photos' %}</h5></div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        {% for photo in deposit.photos.all %}
+                        <div class="col-md-3 col-4">
+                            <a href="{{ photo.image.url }}" target="_blank">
+                                <img src="{{ photo.image.url }}" class="img-fluid rounded" style="height:120px;width:100%;object-fit:cover;">
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if deposit.invoices.exists %}
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">{% trans 'Invoices' %}</h5></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead><tr><th>{% trans 'Invoice' %}</th><th>{% trans 'Total' %}</th><th>{% trans 'Status' %}</th><th>{% trans 'Date' %}</th></tr></thead>
+                            <tbody>
+                                {% for inv in deposit.invoices.all %}
+                                <tr>
+                                    <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+                                    <td>{{ inv.total }}</td>
+                                    <td>{% if inv.is_paid %}<span class="badge bg-success">{% trans 'Paid' %}{% else %}<span class="badge bg-warning">{% trans 'Pending' %}{% endif %}</span></td>
+                                    <td><small>{{ inv.created_at|date:'Y-m-d' }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">{% trans 'Status & Payments' %}</h5></div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if deposit.qr_code %}
+                        <img src="{{ deposit.qr_code.url }}" style="width:120px;height:120px;" class="mb-2">
+                        {% endif %}
+                        <div class="fw-bold fs-5">{{ deposit.deposit_number }}</div>
+                        {% if deposit.barcode_image %}
+                        <img src="{{ deposit.barcode_image.url }}" style="width:180px;height:50px;" class="mt-1">
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <div class="workflow-status">
+                        <div class="workflow-item {% if deposit.status == 'draft' %}active{% endif %}"><i class="bi bi-file-text"></i> {% trans 'Draft' %}</div>
+                        <div class="workflow-arrow"><i class="bi bi-chevron-down"></i></div>
+                        <div class="workflow-item {% if deposit.status == 'received' %}active{% endif %}"><i class="bi bi-inbox"></i> {% trans 'Received' %}</div>
+                        <div class="workflow-arrow"><i class="bi bi-chevron-down"></i></div>
+                        <div class="workflow-item {% if deposit.status == 'invoiced' %}active{% endif %}"><i class="bi bi-file-earmark-text"></i> {% trans 'Invoiced' %}</div>
+                        <div class="workflow-arrow"><i class="bi bi-chevron-down"></i></div>
+                        <div class="workflow-item {% if deposit.status == 'paid' %}active{% endif %}"><i class="bi bi-credit-card"></i> {% trans 'Paid' %}</div>
+                        <div class="workflow-arrow"><i class="bi bi-chevron-down"></i></div>
+                        <div class="workflow-item {% if deposit.status == 'delivered' %}active{% endif %}"><i class="bi bi-check-circle"></i> {% trans 'Delivered' %}</div>
+                    </div>
+                    <hr>
+                    <div class="d-grid gap-2">
+                        {% if deposit.status != 'delivered' %}
+                        <form method="post" action="{% url 'update_status' deposit.pk %}">
+                            {% csrf_token %}
+                            <select name="status" class="form-select mb-2" onchange="this.form.submit()">
+                                <option value="">{% trans 'Change Status...' %}</option>
+                                {% for val, label in status_choices %}
+                                <option value="{{ val }}" {% if deposit.status == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <a href="{% url 'invoice_create' %}?deposit={{ deposit.pk }}" class="btn btn-outline-primary"><i class="bi bi-receipt"></i> {% trans 'Create Invoice' %}</a>
+                        {% endif %}
+                        <a href="{% url 'barcode_delivery' %}?barcode={{ deposit.deposit_number }}" class="btn btn-success"><i class="bi bi-upc-scan"></i> {% trans 'Deliver' %}</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">{% trans 'Activity Log' %}</h5></div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush small">
+                        {% for act in deposit.activities.all|slice:':10' %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ act.user.username }}</strong>
+                                <small class="text-muted">{{ act.timestamp|timesince }} ago</small>
+                            </div>
+                            <div>{{ act.action }}</div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-3 text-muted">{% trans 'No activities' %}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

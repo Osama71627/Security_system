@@ -1,0 +1,109 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{{ invoice.invoice_number }} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Invoice' %}: {{ invoice.invoice_number }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{% trans 'Invoice Details' %}</h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'invoice_pdf' invoice.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-file-pdf"></i> {% trans 'PDF' %}</a>
+                    {% if not invoice.is_paid %}
+                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="bi bi-credit-card"></i> {% trans 'Mark Paid' %}</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6"><label class="detail-label">{% trans 'Invoice Number' %}</label><p class="detail-value fs-5 fw-bold">{{ invoice.invoice_number }}</p></div>
+                    <div class="col-md-6"><label class="detail-label">{% trans 'Customer' %}</label><p class="detail-value">{{ invoice.customer_name }}</p></div>
+                    <div class="col-md-4"><label class="detail-label">{% trans 'Phone' %}</label><p class="detail-value">{{ invoice.customer_phone|default:'--' }}</p></div>
+                    <div class="col-md-4"><label class="detail-label">{% trans 'Date' %}</label><p class="detail-value">{{ invoice.created_at|date:'Y-m-d H:i' }}</p></div>
+                    <div class="col-md-4"><label class="detail-label">{% trans 'Status' %}</label><p class="detail-value">{% if invoice.is_paid %}<span class="badge bg-success fs-6">{% trans 'Paid' %}</span>{% else %}<span class="badge bg-warning fs-6">{% trans 'Pending' %}</span>{% endif %}</p></div>
+                </div>
+                <h6 class="fw-bold">{% trans 'Items' %}</h6>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>{% trans 'Item' %}</th><th>{% trans 'Qty' %}</th><th>{% trans 'Unit Price' %}</th><th>{% trans 'Total' %}</th></tr></thead>
+                        <tbody>
+                            {% for item in invoice.items.all %}
+                            <tr><td>{{ item.service_item }}</td><td>{{ item.quantity }}</td><td>{{ item.unit_price }}</td><td>{{ item.total }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="3" class="text-end fw-medium">{% trans 'Subtotal' %}</td><td>{{ invoice.subtotal }}</td></tr>
+                            <tr><td colspan="3" class="text-end fw-medium">{% trans 'Tax' %} ({{ invoice.tax_percent }}%)</td><td>{{ invoice.tax_amount }}</td></tr>
+                            <tr class="fw-bold fs-5"><td colspan="3" class="text-end">{% trans 'Total' %}</td><td>{{ invoice.total }}</td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% if invoice.notes %}
+                <div class="mt-3 p-3 bg-light rounded"><strong>{% trans 'Notes' %}:</strong><br>{{ invoice.notes }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">{% trans 'Payment Info' %}</h5></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="detail-label">{% trans 'Payment Status' %}</label>
+                    <p>{% if invoice.is_paid %}<span class="badge bg-success fs-6">{% trans 'Paid' %}</span>{% else %}<span class="badge bg-warning fs-6">{% trans 'Pending' %}</span>{% endif %}</p>
+                </div>
+                {% if invoice.is_paid and invoice.payment_date %}
+                <div class="mb-3">
+                    <label class="detail-label">{% trans 'Payment Date' %}</label>
+                    <p>{{ invoice.payment_date|date:'Y-m-d H:i' }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="detail-label">{% trans 'Payment Method' %}</label>
+                    <p>{{ invoice.payment_method|default:'--' }}</p>
+                </div>
+                {% endif %}
+                {% if invoice.deposit %}
+                <hr>
+                <h6>{% trans 'Related Deposit' %}</h6>
+                <a href="{% url 'deposit_detail' invoice.deposit.pk %}" class="btn btn-outline-primary btn-sm">{{ invoice.deposit.deposit_number }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not invoice.is_paid %}
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">{% trans 'Record Payment' %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'mark_invoice_paid' invoice.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{% trans 'Payment Method' %}</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="cash">{% trans 'Cash' %}</option>
+                            <option value="card">{% trans 'Card' %}</option>
+                            <option value="transfer">{% trans 'Bank Transfer' %}</option>
+                            <option value="check">{% trans 'Check' %}</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        {% trans 'Total amount to collect' %}: <strong>{{ invoice.total }}</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'Cancel' %}</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> {% trans 'Confirm Payment' %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

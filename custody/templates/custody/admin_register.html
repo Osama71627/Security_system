@@ -1,0 +1,47 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Admin Register' %} - {{ SITE_NAME }}{% endblock %}
+{% block auth_content %}
+<div class="card" style="width:400px;">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <i class="bi bi-shield-plus text-primary" style="font-size:3rem;"></i>
+            <h4 class="mt-2">{% trans 'Register Admin' %}</h4>
+        </div>
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-medium">{% trans 'Username' %}</label>
+                <input type="text" name="username" class="form-control form-control-lg" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">{% trans 'Password' %}</label>
+                <input type="password" name="password" class="form-control form-control-lg" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">{% trans 'Admin Registration Code' %}</label>
+                <input type="password" name="admin_code" class="form-control form-control-lg" required>
+                <small class="text-muted">{% trans 'Contact the system administrator for the code.' %}</small>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-shield-plus"></i> {% trans 'Register' %}
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-3">
+            <a href="{% url 'admin_login' %}" class="text-decoration-none small">
+                {% trans 'Already have an account? Login' %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+Django>=5.0
+psycopg2-binary
+Pillow
+python-barcode
+reportlab
+openpyxl
+django-filter
+django-import-export
+django-crispy-forms
+crispy-bootstrap5
+qrcode[pil]

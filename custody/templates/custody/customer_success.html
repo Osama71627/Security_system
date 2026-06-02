@@ -1,0 +1,67 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Deposit Submitted' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Deposit Submitted Successfully' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card border-success">
+            <div class="card-body text-center p-5">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i>
+                </div>
+                <h3>{% trans 'Deposit Submitted!' %}</h3>
+                <p class="text-muted">{% trans 'Your item has been registered. Save this barcode — you will need it to pick up your item.' %}</p>
+
+                <div class="border rounded p-4 bg-light my-4">
+                    <div class="mb-3">
+                        <strong>{% trans 'Deposit Number' %}:</strong>
+                        <span class="fs-4 fw-bold text-primary">{{ deposit.deposit_number }}</span>
+                    </div>
+                    {% if deposit.barcode_image %}
+                    <div class="mb-2">
+                        <img src="{{ deposit.barcode_image.url }}" style="width:250px;height:70px;" class="img-fluid">
+                    </div>
+                    {% endif %}
+                    {% if deposit.qr_code %}
+                    <div>
+                        <img src="{{ deposit.qr_code.url }}" style="width:120px;height:120px;" class="img-fluid">
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if deposit.storage_box %}
+                <div class="alert alert-success">
+                    <i class="bi bi-inboxes-fill"></i>
+                    <strong>{% trans 'Storage Box' %}: {{ deposit.storage_box.box_number }}</strong>
+                    <br>{% trans 'Your item is stored in this box.' %}
+                </div>
+                {% endif %}
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    {% trans 'Show this barcode to the receptionist when you come to pick up your item.' %}
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg" onclick="window.print()">
+                        <i class="bi bi-printer"></i> {% trans 'Print' %}
+                    </button>
+                    <a href="{% url 'customer_home' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> {% trans 'Back to My Deposits' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<style>
+@media print {
+    .sidebar, .topbar, .sidebar-toggle, .btn, a[href] { display: none !important; }
+    .card { border: 2px solid #000 !important; box-shadow: none !important; }
+    .main-content { margin: 0 !important; padding: 0 !important; }
+}
+</style>
+{% endblock %}

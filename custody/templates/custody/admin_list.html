@@ -1,0 +1,42 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Admins' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Admin Management' %}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-shield-fill me-2"></i>{% trans 'Admin Users' %}</h5>
+        <a href="{% url 'admin_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i> {% trans 'Add Admin' %}
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>{% trans 'Username' %}</th>
+                        <th>{% trans 'Staff' %}</th>
+                        <th>{% trans 'Superuser' %}</th>
+                        <th>{% trans 'Joined' %}</th>
+                        <th>{% trans 'Last Login' %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in admins %}
+                    <tr>
+                        <td class="fw-medium">{{ a.username }}</td>
+                        <td>{% if a.is_staff %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}</td>
+                        <td>{% if a.is_superuser %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}</td>
+                        <td><small>{{ a.date_joined|date:'Y-m-d' }}</small></td>
+                        <td><small>{{ a.last_login|date:'Y-m-d H:i'|default:'-' }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">{% trans 'No admins found.' %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

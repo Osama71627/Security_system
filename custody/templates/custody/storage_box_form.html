@@ -1,0 +1,34 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Add Storage Box' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Add Storage Box' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Box Number' %} *</label>
+                        <input type="text" name="box_number" class="form-control form-control-lg" placeholder="{% trans 'e.g. BOX-001, RACK-A1' %}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Description' %}</label>
+                        <input type="text" name="description" class="form-control" placeholder="{% trans 'Optional description' %}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Location Area' %}</label>
+                        <input type="text" name="location_area" class="form-control" placeholder="{% trans 'e.g. Main Hall, Room 2' %}">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-plus-circle"></i> {% trans 'Add Box' %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

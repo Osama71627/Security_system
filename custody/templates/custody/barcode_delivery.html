@@ -1,0 +1,229 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Barcode Delivery' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Barcode Delivery Screen' %}{% endblock %}
+{% block content %}
+<div class="delivery-page">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>{% trans 'Scan Barcode' %}</h5></div>
+                <div class="card-body">
+                    <form id="barcodeForm" method="get" action="{% url 'barcode_lookup' %}">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{% trans 'Enter or Scan Barcode' %}</label>
+                            <input type="text" id="barcode-input" name="barcode" class="form-control form-control-lg text-center" placeholder="{% trans 'Scan barcode here...' %}" autofocus>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-search"></i> {% trans 'Look Up' %}
+                            </button>
+                        </div>
+                    </form>
+                    <hr>
+                    <div class="text-center text-muted small">
+                        <p><i class="bi bi-info-circle"></i> {% trans 'Point your camera at the barcode or type the deposit number manually.' %}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>{% trans 'Deposit Details' %}</h5></div>
+                <div class="card-body" id="depositDetails">
+                    <div class="text-center py-5 text-muted" id="noResult">
+                        <i class="bi bi-upc-scan" style="font-size:3rem;"></i>
+                        <p class="mt-2">{% trans 'Scan a barcode to display deposit details' %}</p>
+                    </div>
+                    <div id="depositResult" style="display:none;">
+                        <div id="deliverySpinner" class="text-center py-3" style="display:none;">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                        <div class="row g-3" id="resultContent">
+                            <div class="col-md-5 text-center" id="photoContainer">
+                                <div id="depositPhotos" class="mb-2"></div>
+                                <div id="qrDisplay" class="mt-2"></div>
+                            </div>
+                            <div class="col-md-7">
+                                <table class="table table-borderless detail-table">
+                                    <tr><td class="fw-medium">{% trans 'Deposit No' %}:</td><td id="dDepositNumber" class="fs-5 fw-bold text-primary"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Visitor' %}:</td><td id="dVisitorName"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Phone' %}:</td><td id="dMobile"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Description' %}:</td><td id="dDescription"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Check-In' %}:</td><td id="dCheckIn"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Employee' %}:</td><td id="dEmployee"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Status' %}:</td><td id="dStatus"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Payment' %}:</td><td id="dPayment"></td></tr>
+                                    <tr><td class="fw-medium">{% trans 'Amount' %}:</td><td id="dAmount" class="fw-bold"></td></tr>
+                                </table>
+                                <div id="invoiceInfo" class="mt-2 p-2 bg-light rounded" style="display:none;">
+                                    <strong><i class="bi bi-receipt"></i> {% trans 'Invoices' %}:</strong>
+                                    <div id="invoiceList" class="mt-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <button id="deliverBtn" class="btn btn-success btn-lg" data-id="">
+                                <i class="bi bi-check-circle-fill"></i> {% trans 'Deliver Deposit' %}
+                            </button>
+                            <div class="d-flex gap-2">
+                                <a id="receiptLink" href="#" class="btn btn-outline-info flex-fill" target="_blank"><i class="bi bi-receipt"></i> {% trans 'Receipt' %}</a>
+                                <a id="labelLink" href="#" class="btn btn-outline-secondary flex-fill" target="_blank"><i class="bi bi-upc-scan"></i> {% trans 'Label' %}</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle-fill"></i> {% trans 'Confirm Delivery' %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans 'Are you sure you want to mark this deposit as delivered?' %}</p>
+                <div id="confirmDetails" class="border rounded p-3 bg-light">
+                    <strong id="confirmDeposit"></strong><br>
+                    <span id="confirmVisitor"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'Cancel' %}</button>
+                <button type="button" class="btn btn-success" id="confirmDeliverBtn">
+                    <i class="bi bi-check-lg"></i> {% trans 'Yes, Deliver' %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    var barcodeInput = $('#barcode-input');
+    var deliveryId = null;
+
+    function lookupBarcode(barcode) {
+        if (!barcode) return;
+        $('#noResult').hide();
+        $('#depositResult').hide();
+        $('#deliverySpinner').show();
+
+        $.get('{% url "barcode_lookup" %}', { barcode: barcode }, function(data) {
+            $('#deliverySpinner').hide();
+            if (data.found) {
+                deliveryId = data.id;
+                $('#dDepositNumber').text(data.deposit_number);
+                $('#dVisitorName').text(data.visitor_name);
+                $('#dMobile').text(data.mobile_number);
+                $('#dDescription').text(data.description);
+                $('#dCheckIn').text(data.check_in_date);
+                $('#dEmployee').text(data.employee);
+                $('#dStatus').html('<span class="badge bg-' + (data.status === 'delivered' ? 'success' : data.status === 'paid' ? 'primary' : data.status === 'draft' ? 'secondary' : 'warning') + '">' + data.status_display + '</span>');
+                $('#dPayment').html('<span class="badge bg-' + (data.payment_status === 'paid' ? 'success' : 'warning') + '">' + data.payment_status + '</span>');
+                $('#dAmount').text(data.amount || '0.00');
+                $('#deliverBtn').data('id', data.id);
+                $('#receiptLink').attr('href', '/deposits/' + data.id + '/receipt/');
+                $('#labelLink').attr('href', '/deposits/' + data.id + '/label/');
+
+                var photosHtml = '';
+                if (data.photos && data.photos.length) {
+                    $.each(data.photos, function(i, p) {
+                        if (p.url) {
+                            photosHtml += '<img src="' + p.url + '" class="img-fluid rounded mb-1" style="max-height:80px;width:auto;">';
+                        }
+                    });
+                }
+                if (!photosHtml) {
+                    photosHtml = '<div class="text-muted small"><i class="bi bi-image"></i> no photo</div>';
+                }
+                $('#depositPhotos').html(photosHtml);
+
+                var qrHtml = '';
+                if (data.qr_url) {
+                    qrHtml = '<img src="' + data.qr_url + '" style="width:80px;height:80px;">';
+                }
+                $('#qrDisplay').html(qrHtml);
+
+                var invHtml = '';
+                if (data.invoices && data.invoices.length) {
+                    $('#invoiceInfo').show();
+                    $.each(data.invoices, function(i, inv) {
+                        invHtml += '<div class="d-flex justify-content-between small border-bottom py-1">' +
+                            '<span>' + inv.number + '</span>' +
+                            '<span>' + inv.total + ' <span class="badge bg-' + (inv.is_paid ? 'success' : 'warning') + '">' + (inv.is_paid ? 'Paid' : 'Pending') + '</span></span>' +
+                            '</div>';
+                    });
+                } else {
+                    $('#invoiceInfo').hide();
+                }
+                $('#invoiceList').html(invHtml);
+
+                $('#depositResult').show();
+                $('#resultContent').show();
+
+                if (data.status === 'delivered') {
+                    $('#deliverBtn').prop('disabled', true).text('{% trans "Already Delivered" %}').removeClass('btn-success').addClass('btn-secondary');
+                } else {
+                    $('#deliverBtn').prop('disabled', false).text('{% trans "Deliver Deposit" %}').removeClass('btn-secondary').addClass('btn-success');
+                }
+            } else {
+                $('#noResult').show().find('p').text(data.error || '{% trans "Deposit not found" %}');
+                $('#deliverBtn').prop('disabled', true);
+            }
+        });
+    }
+
+    $('#barcodeForm').on('submit', function(e) {
+        e.preventDefault();
+        lookupBarcode(barcodeInput.val().trim());
+    });
+
+    barcodeInput.on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            lookupBarcode($(this).val().trim());
+        }
+    });
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('barcode')) {
+        barcodeInput.val(params.get('barcode'));
+        lookupBarcode(params.get('barcode'));
+    }
+
+    $('#deliverBtn').on('click', function() {
+        var id = $(this).data('id');
+        if (!id) return;
+        $('#confirmDeposit').text($('#dDepositNumber').text());
+        $('#confirmVisitor').text($('#dVisitorName').text() + ' - ' + $('#dMobile').text());
+        $('#confirmModal').modal('show');
+    });
+
+    $('#confirmDeliverBtn').on('click', function() {
+        var id = $('#deliverBtn').data('id');
+        $.post('/delivery/' + id + '/confirm/', {
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        }, function(data) {
+            if (data.success) {
+                $('#confirmModal').modal('hide');
+                location.reload();
+            } else {
+                alert(data.error || '{% trans "Error processing delivery" %}');
+            }
+        });
+    });
+
+    if (barcodeInput.val()) {
+        barcodeInput.select();
+    }
+    $(document).on('click', function() { barcodeInput.focus(); });
+});
+</script>
+{% endblock %}
