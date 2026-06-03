@@ -1,4 +1,4 @@
-Django>=5.0
+Django>=5.0,<5.1
 psycopg2-binary
 Pillow
 python-barcode
@@ -9,3 +9,6 @@ django-import-export
 django-crispy-forms
 crispy-bootstrap5
 qrcode[pil]
+gunicorn
+dj-database-url
+whitenoise
