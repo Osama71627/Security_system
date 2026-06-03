@@ -101,6 +101,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{% url 'pricing_rule_list' %}" class="nav-link {% if request.resolver_match.url_name == 'pricing_rule_list' %}active{% endif %}">
+                            <i class="bi bi-currency-dollar"></i>
+                            <span>{% trans 'Pricing' %}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{% url 'storage_box_list' %}" class="nav-link {% if request.resolver_match.url_name == 'storage_box_list' %}active{% endif %}">
                             <i class="bi bi-inboxes-fill"></i>
                             <span>{% trans 'Storage Boxes' %}</span>

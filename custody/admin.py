@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, ActivityLog, Employee, Customer, SystemSettings
+from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, ActivityLog, Employee, Customer, SystemSettings, StorageBox, PricingRule, PaymentTransaction
 
 class DepositPhotoInline(admin.TabularInline):
     model = DepositPhoto
@@ -76,3 +76,21 @@ class EmployeeAdmin(admin.ModelAdmin):
 @admin.register(SystemSettings)
 class SystemSettingsAdmin(admin.ModelAdmin):
     pass
+
+@admin.register(StorageBox)
+class StorageBoxAdmin(admin.ModelAdmin):
+    list_display = ['box_number', 'item_type', 'location_area', 'is_available']
+    list_filter = ['is_available', 'item_type']
+    search_fields = ['box_number', 'location_area']
+
+@admin.register(PricingRule)
+class PricingRuleAdmin(admin.ModelAdmin):
+    list_display = ['item_type', 'duration_days', 'price', 'is_active']
+    list_filter = ['item_type', 'is_active']
+    list_editable = ['price', 'is_active']
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = ['transaction_id', 'booking', 'amount', 'status', 'gateway', 'created_at']
+    list_filter = ['status', 'gateway']
+    search_fields = ['transaction_id', 'booking__deposit_number']

@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
-from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, Employee, SystemSettings, StorageBox
+from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, Employee, SystemSettings, StorageBox, PricingRule
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -25,9 +25,9 @@ class DepositForm(forms.ModelForm):
         fields = [
             'visitor_name', 'mobile_number', 'national_id',
             'check_in_date', 'expected_pickup_date',
-            'description', 'notes',
+            'item_type', 'duration_days', 'description', 'notes',
             'storage_box', 'storage_location', 'shelf_number',
-            'assigned_employee',
+            'pricing_rule', 'assigned_employee',
         ]
         widgets = {
             'check_in_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
@@ -37,9 +37,12 @@ class DepositForm(forms.ModelForm):
             'national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Enter national ID or passport')}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _('Describe the deposit item')}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': _('Additional notes')}),
+            'item_type': forms.Select(attrs={'class': 'form-select'}),
+            'duration_days': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'storage_box': forms.Select(attrs={'class': 'form-select'}),
             'storage_location': forms.Select(attrs={'class': 'form-select'}),
             'shelf_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Shelf number')}),
+            'pricing_rule': forms.Select(attrs={'class': 'form-select'}),
             'assigned_employee': forms.Select(attrs={'class': 'form-select'}),
         }
 

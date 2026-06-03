@@ -16,8 +16,10 @@
                     <div class="col-md-6">{{ form.visitor_name|as_crispy_field }}</div>
                     <div class="col-md-3">{{ form.mobile_number|as_crispy_field }}</div>
                     <div class="col-md-3">{{ form.national_id|as_crispy_field }}</div>
-                    <div class="col-md-4">{{ form.check_in_date|as_crispy_field }}</div>
-                    <div class="col-md-4">{{ form.expected_pickup_date|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.check_in_date|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.expected_pickup_date|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.item_type|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.duration_days|as_crispy_field }}</div>
                     <div class="col-md-4">{{ form.assigned_employee|as_crispy_field }}</div>
                     <div class="col-12">{{ form.description|as_crispy_field }}</div>
                     <div class="col-12">{{ form.notes|as_crispy_field }}</div>
@@ -26,9 +28,10 @@
                         <h6 class="section-title mt-3"><i class="bi bi-geo-alt me-2"></i>{% trans 'Storage Information' %}</h6>
                         <hr>
                     </div>
-                    <div class="col-md-4">{{ form.storage_box|as_crispy_field }}</div>
-                    <div class="col-md-4">{{ form.storage_location|as_crispy_field }}</div>
-                    <div class="col-md-4">{{ form.shelf_number|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.storage_box|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.storage_location|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.shelf_number|as_crispy_field }}</div>
+                    <div class="col-md-3">{{ form.pricing_rule|as_crispy_field }}</div>
 
                     <div class="col-12">
                         <h6 class="section-title mt-3"><i class="bi bi-images me-2"></i>{% trans 'Deposit Photos' %}</h6>

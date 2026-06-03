@@ -1,0 +1,99 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Secure Locker Rental' %} - {{ SITE_NAME }}{% endblock %}
+{% block auth_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-shield-check text-primary" style="font-size:3rem;"></i>
+                        <h3 class="mt-2">{{ SITE_NAME }}</h3>
+                        <p class="text-muted">{% trans 'Rent a secure locker for your valuables' %}</p>
+                    </div>
+                    <form method="post" action="{% url 'checkout_create' %}" id="checkoutForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{% trans 'Full Name' %} *</label>
+                            <input type="text" name="name" class="form-control form-control-lg" required placeholder="{% trans 'Your full name' %}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{% trans 'Phone Number' %} *</label>
+                            <input type="tel" name="phone" class="form-control form-control-lg" required placeholder="05XXXXXXXX">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{% trans 'Item Type' %} *</label>
+                            <select name="item_type" id="itemType" class="form-select form-select-lg" required>
+                                {% for t in item_types %}
+                                <option value="{{ t.key }}">{{ t.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{% trans 'Rental Duration (days)' %} *</label>
+                            <input type="number" name="duration_days" id="durationDays" class="form-control form-control-lg" value="1" min="1" max="365" required>
+                        </div>
+                        <div class="border rounded p-3 bg-light mb-4" id="priceDisplay">
+                            <div class="d-flex justify-content-between">
+                                <span>{% trans 'Price' %}:</span>
+                                <span id="priceValue" class="fw-bold">--</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>{% trans 'Tax' %}:</span>
+                                <span id="taxValue">--</span>
+                            </div>
+                            <hr class="my-1">
+                            <div class="d-flex justify-content-between fw-bold fs-5">
+                                <span>{% trans 'Total' %}:</span>
+                                <span id="totalValue" class="text-primary">--</span>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                                <i class="bi bi-lock-fill"></i> {% trans 'Continue to Payment' %}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'admin_login' %}" class="text-decoration-none small">{% trans 'Staff login' %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const itemType = document.getElementById('itemType');
+    const durationDays = document.getElementById('durationDays');
+    const priceVal = document.getElementById('priceValue');
+    const taxVal = document.getElementById('taxValue');
+    const totalVal = document.getElementById('totalValue');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function fetchPrice() {
+        fetch('{% url "checkout_calculate" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+            body: JSON.stringify({ item_type: itemType.value, duration_days: parseInt(durationDays.value) || 1 })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.total) {
+                priceVal.textContent = d.price + ' EGP';
+                taxVal.textContent = d.tax_amount + ' EGP ({{ tax_percent|default:"15" }}%)';
+                totalVal.textContent = d.total + ' EGP';
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(() => {});
+    }
+    itemType.addEventListener('change', fetchPrice);
+    durationDays.addEventListener('input', fetchPrice);
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(fetchPrice, 100);
+    });
+})();
+</script>
+{% endblock %}

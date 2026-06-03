@@ -4,12 +4,26 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+ITEM_TYPES = [
+    ('small', _('Small (phone/wallet)')),
+    ('medium', _('Medium (bag/laptop)')),
+    ('large', _('Large (suitcase/box)')),
+    ('extra_large', _('Extra Large (furniture)')),
+]
+
 DEPOSIT_STATUS = [
     ('draft', _('Draft')),
-    ('received', _('Received')),
-    ('invoiced', _('Invoiced')),
+    ('pending_payment', _('Pending Payment')),
     ('paid', _('Paid')),
     ('delivered', _('Delivered')),
+    ('cancelled', _('Cancelled')),
+]
+
+PAYMENT_STATUS = [
+    ('pending', _('Pending')),
+    ('paid', _('Paid')),
+    ('failed', _('Failed')),
+    ('refunded', _('Refunded')),
 ]
 
 PAYMENT_STATUS = [
@@ -65,10 +79,27 @@ class Employee(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.employee_id})"
 
+class PricingRule(models.Model):
+    item_type = models.CharField(_('Item Type'), max_length=20, choices=ITEM_TYPES)
+    duration_days = models.PositiveIntegerField(_('Duration (days)'))
+    price = models.DecimalField(_('Price'), max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(_('Active'), default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Pricing Rule')
+        verbose_name_plural = _('Pricing Rules')
+        unique_together = [('item_type', 'duration_days')]
+        ordering = ['item_type', 'duration_days']
+
+    def __str__(self):
+        return f"{self.get_item_type_display()} - {self.duration_days}d - {self.price}"
+
 class StorageBox(models.Model):
     box_number = models.CharField(_('Box/Unit Number'), max_length=50, unique=True)
     description = models.CharField(_('Description'), max_length=200, blank=True, null=True)
     location_area = models.CharField(_('Location Area'), max_length=100, blank=True, null=True)
+    item_type = models.CharField(_('Fits Item Type'), max_length=20, choices=ITEM_TYPES, default='medium', help_text=_('What size item fits this box'))
     is_available = models.BooleanField(_('Available'), default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -78,7 +109,7 @@ class StorageBox(models.Model):
         ordering = ['box_number']
 
     def __str__(self):
-        return f"{self.box_number} ({self.location_area})" if self.location_area else self.box_number
+        return f"{self.box_number} ({self.get_item_type_display()})"
 
 class Deposit(models.Model):
     deposit_number = models.CharField(_('Deposit Number'), max_length=20, unique=True, editable=False)
@@ -91,6 +122,13 @@ class Deposit(models.Model):
     national_id = models.CharField(_('National ID / Passport'), max_length=50)
     check_in_date = models.DateTimeField(_('Check-In Date'), default=timezone.now)
     expected_pickup_date = models.DateField(_('Expected Pickup Date'), null=True, blank=True)
+
+    # Rental-specific fields
+    item_type = models.CharField(_('Item Type'), max_length=20, choices=ITEM_TYPES, default='medium')
+    duration_days = models.PositiveIntegerField(_('Rental Duration (days)'), default=1)
+    start_date = models.DateField(_('Rental Start Date'), null=True, blank=True)
+    end_date = models.DateField(_('Rental End Date'), null=True, blank=True)
+    pricing_rule = models.ForeignKey(PricingRule, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('Applied Pricing'))
 
     description = models.TextField(_('Deposit Description'))
     notes = models.TextField(_('Notes'), blank=True, null=True)
@@ -109,6 +147,10 @@ class Deposit(models.Model):
     amount = models.DecimalField(_('Amount'), max_digits=10, decimal_places=2, default=0)
     tax_amount = models.DecimalField(_('Tax'), max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(_('Total'), max_digits=10, decimal_places=2, default=0)
+
+    # Secure fields
+    encrypted_reference = models.TextField(_('Encrypted Reference'), blank=True, null=True, help_text=_('Cryptographically signed booking reference for QR'))
+    payment_token = models.CharField(_('Payment Token'), max_length=100, blank=True, null=True, help_text=_('One-time token for payment gateway redirect'))
 
     delivery_date = models.DateTimeField(_('Delivery Date'), null=True, blank=True)
     delivered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivered_deposits')
@@ -136,6 +178,30 @@ class Deposit(models.Model):
         date_part = timezone.now().strftime('%Y%m%d')
         last = Deposit.objects.filter(deposit_number__startswith=f'{prefix}-{date_part}').count() + 1
         return f'{prefix}-{date_part}-{last:04d}'
+
+class PaymentTransaction(models.Model):
+    TRANS_STATUS = [
+        ('pending', _('Pending')),
+        ('completed', _('Completed')),
+        ('failed', _('Failed')),
+        ('refunded', _('Refunded')),
+    ]
+    booking = models.ForeignKey(Deposit, on_delete=models.CASCADE, related_name='payment_transactions', verbose_name=_('Booking'))
+    transaction_id = models.CharField(_('Gateway Transaction ID'), max_length=100, unique=True, blank=True, null=True)
+    amount = models.DecimalField(_('Amount'), max_digits=10, decimal_places=2)
+    gateway = models.CharField(_('Payment Gateway'), max_length=50, default='mock')
+    gateway_response = models.JSONField(_('Gateway Response'), blank=True, null=True)
+    status = models.CharField(_('Status'), max_length=20, choices=TRANS_STATUS, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(_('Processed At'), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('Payment Transaction')
+        verbose_name_plural = _('Payment Transactions')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_id or 'N/A'} - {self.amount} ({self.status})"
 
 class DepositPhoto(models.Model):
     deposit = models.ForeignKey(Deposit, on_delete=models.CASCADE, related_name='photos')

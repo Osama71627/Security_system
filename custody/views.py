@@ -1,10 +1,11 @@
-import json, csv, io
+import json, csv, io, uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
@@ -14,7 +15,7 @@ from django.db.models import Count, Sum, Q
 from django.template.loader import render_to_string
 from django.conf import settings
 
-from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, ActivityLog, Employee, Customer, SystemSettings, StorageBox
+from .models import Deposit, DepositPhoto, Invoice, InvoiceItem, ActivityLog, Employee, Customer, SystemSettings, StorageBox, PricingRule
 from .forms import DepositForm, InvoiceForm, InvoiceItemForm, EmployeeForm, SystemSettingsForm, BarcodeSearchForm, DateRangeForm
 from .utils import generate_barcode_image, generate_qr_code_image, generate_invoice_pdf, generate_receipt_pdf, generate_label_pdf, log_activity
 from .decorators import admin_required
@@ -73,48 +74,50 @@ def customer_deposit(request):
     if not is_customer(request.user):
         return redirect('customer_register')
     customer = request.user.customer_profile
+    initial = {
+        'visitor_name': customer.full_name or customer.mobile,
+        'mobile_number': customer.mobile,
+    }
     if request.method == 'POST':
-        description = request.POST.get('description', '')
-        notes = request.POST.get('notes', '')
-        if not description:
-            messages.error(request, _('Please describe the item'))
-            return render(request, 'custody/customer_deposit.html', {'customer': customer})
-        deposit = Deposit.objects.create(
-            customer=customer,
-            visitor_name=customer.full_name or customer.mobile,
-            mobile_number=customer.mobile,
-            national_id='', description=description, notes=notes,
-            status='draft', payment_status='pending',
-        )
-        for f in request.FILES.getlist('photos'):
-            DepositPhoto.objects.create(deposit=deposit, image=f)
-        available_box = StorageBox.objects.filter(is_available=True).first()
-        if available_box:
-            deposit.storage_box = available_box
-            available_box.is_available = False
-            available_box.save()
-        settings_obj = SystemSettings.objects.first()
-        fee = settings_obj.deposit_fee if settings_obj else 50
-        fee_desc = settings_obj.deposit_fee_description if settings_obj else 'Deposit Service Fee'
-        tax_pct = settings_obj.default_tax_percent if settings_obj else 15
-        subtotal = fee
-        tax_amt = subtotal * (tax_pct / Decimal('100'))
-        total = subtotal + tax_amt
-        invoice = Invoice.objects.create(
-            deposit=deposit,
-            customer_name=customer.full_name or customer.mobile,
-            customer_phone=customer.mobile,
-            subtotal=subtotal, tax_percent=tax_pct, tax_amount=tax_amt, total=total,
-            created_by=request.user,
-        )
-        InvoiceItem.objects.create(invoice=invoice, service_item=fee_desc, quantity=1, unit_price=fee, total=fee)
-        deposit.amount = subtotal
-        deposit.tax_amount = tax_amt
-        deposit.total_amount = total
-        deposit.save()
-        log_activity(request.user, 'Customer submitted deposit', f'{deposit.deposit_number}', deposit, request)
-        return redirect('customer_payment', pk=deposit.pk)
-    return render(request, 'custody/customer_deposit.html', {'customer': customer})
+        form = DepositForm(request.POST, request.FILES)
+        if form.is_valid():
+            deposit = form.save(commit=False)
+            deposit.customer = customer
+            deposit.status = 'draft'
+            deposit.payment_status = 'pending'
+            deposit.save()
+            for f in request.FILES.getlist('photos'):
+                DepositPhoto.objects.create(deposit=deposit, image=f)
+            available_box = StorageBox.objects.filter(is_available=True).first()
+            if available_box:
+                deposit.storage_box = available_box
+                available_box.is_available = False
+                available_box.save()
+            settings_obj = SystemSettings.objects.first()
+            fee = settings_obj.deposit_fee if settings_obj else 50
+            fee_desc = settings_obj.deposit_fee_description if settings_obj else 'Deposit Service Fee'
+            tax_pct = settings_obj.default_tax_percent if settings_obj else 15
+            subtotal = fee
+            tax_amt = subtotal * (tax_pct / Decimal('100'))
+            total = subtotal + tax_amt
+            invoice = Invoice.objects.create(
+                deposit=deposit,
+                customer_name=customer.full_name or customer.mobile,
+                customer_phone=customer.mobile,
+                subtotal=subtotal, tax_percent=tax_pct, tax_amount=tax_amt, total=total,
+                created_by=request.user,
+            )
+            InvoiceItem.objects.create(invoice=invoice, service_item=fee_desc, quantity=1, unit_price=fee, total=fee)
+            deposit.amount = subtotal
+            deposit.tax_amount = tax_amt
+            deposit.total_amount = total
+            deposit.save()
+            log_activity(request.user, 'Customer submitted deposit', f'{deposit.deposit_number}', deposit, request)
+            return redirect('customer_payment', pk=deposit.pk)
+    else:
+        form = DepositForm(initial=initial)
+    excluded = ['assigned_employee', 'storage_box', 'storage_location', 'shelf_number', 'pricing_rule', 'check_in_date', 'expected_pickup_date']
+    return render(request, 'custody/customer_deposit.html', {'form': form, 'customer': customer, 'excluded': excluded})
 
 @login_required
 def customer_payment(request, pk):
@@ -695,3 +698,175 @@ def system_settings_view(request):
     else:
         form = SystemSettingsForm(instance=settings_obj)
     return render(request, 'custody/settings.html', {'form': form})
+
+# ─── Secure Checkout Flow (No Login Required) ────────────────────
+def checkout_form(request):
+    """Step 1: Display the rental booking form. Customer enters name, phone, item type, duration."""
+    item_types = [{'key': k, 'label': str(v)} for k, v in Deposit._meta.get_field('item_type').choices]
+    return render(request, 'custody/checkout_form.html', {'item_types': item_types})
+
+def checkout_calculate(request):
+    """AJAX: Backend-only price calculation. Frontend sends item_type + duration, backend returns price."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    import json as json_lib
+    data = json_lib.loads(request.body)
+    item_type = data.get('item_type', 'medium')
+    duration_days = int(data.get('duration_days', 1))
+    from .payments import calculate_price
+    price = calculate_price(item_type, duration_days)
+    settings_obj = SystemSettings.objects.first()
+    tax_pct = settings_obj.default_tax_percent if settings_obj else 15
+    tax_amt = price * (tax_pct / Decimal('100'))
+    total = price + tax_amt
+    return JsonResponse({
+        'price': str(price),
+        'tax_percent': str(tax_pct),
+        'tax_amount': str(tax_amt),
+        'total': str(total),
+    })
+
+def checkout_create(request):
+    """Step 2: Create pending booking. Frontend sends name/phone/item_type/duration. Price is calculated server-side only."""
+    if request.method != 'POST':
+        return redirect('checkout_form')
+    name = request.POST.get('name', '').strip()
+    phone = request.POST.get('phone', '').strip()
+    item_type = request.POST.get('item_type', 'medium')
+    duration_days = int(request.POST.get('duration_days', 1))
+    if not name or not phone:
+        messages.error(request, _('Name and phone are required'))
+        return redirect('checkout_form')
+    from .payments import calculate_price, create_checkout_session
+    customer, _ = Customer.objects.get_or_create(
+        mobile=phone,
+        defaults={'full_name': name, 'user': User.objects.create_user(username=phone, password=phone[-6:] if len(phone) >= 6 else phone)}
+    )
+    if not customer.full_name:
+        customer.full_name = name
+        customer.save()
+    settings_obj = SystemSettings.objects.first()
+    tax_pct = settings_obj.default_tax_percent if settings_obj else 15
+    price = calculate_price(item_type, duration_days)
+    tax_amt = price * (tax_pct / Decimal('100'))
+    total = price + tax_amt
+    booking = Deposit.objects.create(
+        customer=customer,
+        visitor_name=name, mobile_number=phone, national_id='',
+        item_type=item_type, duration_days=duration_days,
+        description=f'{item_type} rental for {duration_days} day(s)',
+        status='pending_payment', payment_status='pending',
+        amount=price, tax_amount=tax_amt, total_amount=total,
+    )
+    pricing_rule = PricingRule.objects.filter(item_type=item_type, duration_days=duration_days, is_active=True).first()
+    if pricing_rule:
+        booking.pricing_rule = pricing_rule
+    token = create_checkout_session(booking)
+    from .payments import calculate_price
+    log_activity(None, 'Booking created', f'{booking.deposit_number} - {name} - {item_type} {duration_days}d', booking)
+    return redirect('checkout_payment', token=token)
+
+def checkout_payment(request, token):
+    """Step 3: Mock payment gateway page. Shows total and 'Pay Now' button."""
+    from .payments import verify_payment_token
+    booking = Deposit.objects.filter(payment_token=token).first()
+    if not booking or not verify_payment_token(token, booking.deposit_number):
+        messages.error(request, _('Invalid or expired payment session'))
+        return redirect('checkout_form')
+    if booking.status == 'paid':
+        return redirect('checkout_success', ref=booking.encrypted_reference or booking.deposit_number)
+    return render(request, 'custody/checkout_payment.html', {'booking': booking, 'token': token})
+
+def checkout_process(request, token):
+    """Step 3b: Process mock payment. Redirect to gateway callback."""
+    from .payments import verify_payment_token
+    booking = Deposit.objects.filter(payment_token=token).first()
+    if not booking or not verify_payment_token(token, booking.deposit_number):
+        messages.error(request, _('Invalid payment session'))
+        return redirect('checkout_form')
+    if request.method == 'POST':
+        return redirect('checkout_callback', token=token)
+    return redirect('checkout_payment', token=token)
+
+def checkout_callback(request, token):
+    """Step 3c: Mock gateway callback (simulates webhook). Processes payment and assigns locker."""
+    from .payments import verify_payment_token, process_successful_payment
+    booking = Deposit.objects.filter(payment_token=token).first()
+    if not booking or not verify_payment_token(token, booking.deposit_number):
+        messages.error(request, _('Invalid payment session'))
+        return redirect('checkout_form')
+    if booking.status == 'paid':
+        return redirect('checkout_success', ref=booking.encrypted_reference or booking.deposit_number)
+    booking = process_successful_payment(booking.deposit_number, gateway_txn_id=f"MOCK-{token[:8].upper()}", gateway='mock', gateway_response={'source': 'mock_callback', 'token': token})
+    if not booking:
+        messages.error(request, _('Payment processing failed'))
+        return redirect('checkout_form')
+    return redirect('checkout_success', ref=booking.encrypted_reference)
+
+def checkout_success(request, ref):
+    """Step 4: Success page with QR code (containing encrypted reference) and locker details."""
+    from .utils import decrypt_reference
+    deposit_number = decrypt_reference(ref)
+    if not deposit_number:
+        deposit_number = ref
+    booking = get_object_or_404(Deposit.objects.select_related('storage_box'), deposit_number=deposit_number)
+    return render(request, 'custody/checkout_success.html', {'booking': booking})
+
+# ─── Webhook Endpoints ────────────────────────────────────────────
+@csrf_exempt
+def webhook_payment(request):
+    """Secure webhook endpoint for payment gateways. Expects JSON with booking_ref and status."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    import json as json_lib
+    try:
+        data = json_lib.loads(request.body)
+    except json_lib.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    booking_ref = data.get('booking_ref')
+    status = data.get('status', 'completed')
+    gateway_txn = data.get('transaction_id', '')
+    if not booking_ref:
+        return JsonResponse({'error': 'booking_ref required'}, status=400)
+    if status != 'completed':
+        return JsonResponse({'error': 'Payment not completed'}, status=200)
+    from .payments import process_successful_payment
+    booking = process_successful_payment(booking_ref, gateway_txn_id=gateway_txn or f"WEBHOOK-{uuid.uuid4().hex[:12].upper()}", gateway='webhook', gateway_response=data)
+    if not booking:
+        return JsonResponse({'error': 'Booking not found'}, status=404)
+    return JsonResponse({'success': True, 'booking': booking.deposit_number, 'locker': booking.storage_box.box_number if booking.storage_box else None})
+
+# ─── Pricing Rules Admin ──────────────────────────────────────────
+@login_required
+@admin_required
+def pricing_rule_list(request):
+    rules = PricingRule.objects.all().order_by('item_type', 'duration_days')
+    item_types = Deposit._meta.get_field('item_type').choices
+    return render(request, 'custody/pricing_rule_list.html', {'rules': rules, 'item_types': item_types})
+
+@login_required
+@admin_required
+def pricing_rule_create(request):
+    if request.method == 'POST':
+        item_type = request.POST.get('item_type')
+        duration_days = int(request.POST.get('duration_days', 1))
+        price = Decimal(request.POST.get('price', 0))
+        is_active = request.POST.get('is_active') == 'on'
+        if item_type and duration_days > 0 and price > 0:
+            PricingRule.objects.update_or_create(
+                item_type=item_type, duration_days=duration_days,
+                defaults={'price': price, 'is_active': is_active}
+            )
+            messages.success(request, _('Pricing rule saved!'))
+            return redirect('pricing_rule_list')
+        messages.error(request, _('Invalid values'))
+    item_types = Deposit._meta.get_field('item_type').choices
+    return render(request, 'custody/pricing_rule_form.html', {'item_types': item_types})
+
+@login_required
+@admin_required
+def pricing_rule_delete(request, pk):
+    rule = get_object_or_404(PricingRule, pk=pk)
+    rule.delete()
+    messages.success(request, _('Rule deleted'))
+    return redirect('pricing_rule_list')

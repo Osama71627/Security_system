@@ -1,5 +1,4 @@
 from django.urls import path
-from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
@@ -78,4 +77,21 @@ urlpatterns = [
 
     # Activity Log
     path('activity-log/', views.activity_log_view, name='activity_log'),
+
+    # Public Checkout Flow (Secure Rental Booking)
+    path('rent/', views.checkout_form, name='checkout_form'),
+    path('rent/calculate/', views.checkout_calculate, name='checkout_calculate'),
+    path('rent/create/', views.checkout_create, name='checkout_create'),
+    path('rent/pay/<str:token>/', views.checkout_payment, name='checkout_payment'),
+    path('rent/process/<str:token>/', views.checkout_process, name='checkout_process'),
+    path('rent/callback/<str:token>/', views.checkout_callback, name='checkout_callback'),
+    path('rent/success/<str:ref>/', views.checkout_success, name='checkout_success'),
+
+    # Webhook (Payment Gateway Callback)
+    path('webhook/payment/', views.webhook_payment, name='webhook_payment'),
+
+    # Pricing Rules Management (Admin)
+    path('pricing/', views.pricing_rule_list, name='pricing_rule_list'),
+    path('pricing/new/', views.pricing_rule_create, name='pricing_rule_create'),
+    path('pricing/<int:pk>/delete/', views.pricing_rule_delete, name='pricing_rule_delete'),
 ]

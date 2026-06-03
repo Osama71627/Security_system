@@ -1,0 +1,42 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Add Pricing Rule' %} - {{ SITE_NAME }}{% endblock %}
+{% block page_title %}{% trans 'Add Pricing Rule' %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Item Type' %} *</label>
+                        <select name="item_type" class="form-select form-select-lg" required>
+                            {% for key, label in item_types %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Duration (days)' %} *</label>
+                        <input type="number" name="duration_days" class="form-control form-control-lg" value="1" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">{% trans 'Price (EGP)' %} *</label>
+                        <input type="number" name="price" class="form-control form-control-lg" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="isActive" checked>
+                        <label class="form-check-label" for="isActive">{% trans 'Active' %}</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> {% trans 'Save Rule' %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

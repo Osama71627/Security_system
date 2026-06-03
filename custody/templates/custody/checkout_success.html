@@ -1,0 +1,61 @@
+{% extends 'custody/base.html' %}
+{% load static i18n %}
+{% block title %}{% trans 'Booking Confirmed' %} - {{ SITE_NAME }}{% endblock %}
+{% block auth_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-success shadow">
+                <div class="card-body text-center p-5">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size:4rem;"></i>
+                    </div>
+                    <h3>{% trans 'Booking Confirmed!' %}</h3>
+                    <p class="text-muted">{% trans 'Your secure locker has been assigned. Show this QR code at pickup.' %}</p>
+
+                    <div class="border rounded p-4 bg-light my-4">
+                        <div class="mb-3">
+                            <strong>{% trans 'Booking Reference' %}:</strong>
+                            <span class="fs-4 fw-bold text-primary">{{ booking.deposit_number }}</span>
+                        </div>
+
+                        {% if booking.qr_code %}
+                        <div class="mb-3">
+                            <img src="{{ booking.qr_code.url }}" style="width:160px;height:160px;" class="img-fluid border p-2 bg-white">
+                        </div>
+                        <p class="small text-muted">{% trans 'Scan this QR at the kiosk for quick pickup' %}</p>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="row text-start g-2">
+                            <div class="col-6"><small class="text-muted">{% trans 'Customer' %}</small><br><strong>{{ booking.visitor_name }}</strong></div>
+                            <div class="col-6"><small class="text-muted">{% trans 'Phone' %}</small><br><strong>{{ booking.mobile_number }}</strong></div>
+                            <div class="col-6"><small class="text-muted">{% trans 'Item Type' %}</small><br><strong>{{ booking.get_item_type_display }}</strong></div>
+                            <div class="col-6"><small class="text-muted">{% trans 'Duration' %}</small><br><strong>{{ booking.duration_days }} day(s)</strong></div>
+                            {% if booking.storage_box %}
+                            <div class="col-12 mt-2">
+                                <div class="alert alert-success mb-0 text-center">
+                                    <i class="bi bi-inboxes-fill"></i>
+                                    <strong>{% trans 'Locker Assigned' %}: {{ booking.storage_box.box_number }}</strong>
+                                    <br><small>{% trans 'Location' %}: {{ booking.storage_box.location_area|default:'Main Facility' }}</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" onclick="window.print()">
+                            <i class="bi bi-printer"></i> {% trans 'Print Receipt' %}
+                        </button>
+                        <a href="{% url 'checkout_form' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-box-arrow-right"></i> {% trans 'New Booking' %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

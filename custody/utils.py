@@ -1,16 +1,44 @@
 import io
 import os
+import json
 import qrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from reportlab.lib.pagesizes import A4, mm
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm as rl_mm
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from django.utils import timezone
+
+signer = TimestampSigner()
+
+def encrypt_reference(deposit_number):
+    """Cryptographically sign booking reference for QR code (prevents forgery)."""
+    data = json.dumps({'ref': deposit_number, 'ts': timezone.now().isoformat()})
+    return signer.sign(data)
+
+def decrypt_reference(signed_data, max_age=86400 * 365):
+    """Verify and decrypt a signed booking reference."""
+    try:
+        raw = signer.unsign(signed_data, max_age=max_age)
+        return json.loads(raw)['ref']
+    except (BadSignature, SignatureExpired):
+        return None
+
+def generate_qr_encrypted(deposit_number):
+    """Generate QR code image containing the encrypted booking reference."""
+    encrypted = encrypt_reference(deposit_number)
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(encrypted)
+    qr.make(fit=True)
+    img = qr.make_image(fill='black', back_color='white')
+    rv = io.BytesIO()
+    img.save(rv, format='PNG')
+    return ContentFile(rv.getvalue(), name=f'qr_enc_{deposit_number}.png'), encrypted
 
 def generate_barcode_image(deposit_number):
     try:
