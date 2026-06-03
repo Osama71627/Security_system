@@ -4,7 +4,7 @@ services:
     runtime: python
     branch: main
     buildCommand: ./build.sh
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
