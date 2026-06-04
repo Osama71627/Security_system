@@ -1,8 +1,17 @@
 import os
+import sys
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Force PostgreSQL on Render – no fallback to SQLite
+ON_RENDER = os.environ.get('RENDER') == 'true'
+if ON_RENDER and not os.environ.get('DATABASE_URL'):
+    print('ERROR: DATABASE_URL is not set.', file=sys.stderr)
+    print('Go to Render Dashboard → Web Service → Environment → Add DATABASE_URL', file=sys.stderr)
+    print('(Create a PostgreSQL database first if not done yet.)', file=sys.stderr)
+    sys.exit(1)
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-&n$b6n0_1-p7ca&wfidff!z$a2sodt*mxpc7aza!pcpebs&-c4')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
@@ -62,7 +71,7 @@ import dj_database_url
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     DATABASES = {'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
-else:
+elif not ON_RENDER:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
